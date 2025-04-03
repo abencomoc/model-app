@@ -1,0 +1,5 @@
+# ray[serve] # comment when building container image using ray base image
+fastapi
+transformers
+torch
+pydantic

@@ -1,0 +1,88 @@
+apiVersion: ray.io/v1alpha1
+kind: RayService
+metadata:
+  name: finbert-cpu
+spec:
+  serveConfigV2: |
+    applications:
+      - name: finbert
+        route_prefix: /
+        import_path: finbert_ray:finbertapp
+        runtime_env: {}
+        deployments:
+          - name: Finbert
+            num_replicas: 3
+  rayClusterConfig:
+    rayVersion: '2.44.0'
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          containers:
+            - name: ray-head
+              image: 507992857438.dkr.ecr.us-east-1.amazonaws.com/finbert_ray:amd64  # Replace with your image
+              resources:
+                limits:
+                  memory: "4Gi"
+                  # nvidia.com/gpu: 0  # Uncomment if you need GPU
+                requests:
+                  cpu: "1"
+                  memory: "4Gi"
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+                - containerPort: 8000
+                  name: serve
+    workerGroupSpecs:
+      - replicas: 1 
+        minReplicas: 1
+        maxReplicas: 5
+        groupName: workers
+        rayStartParams: {}
+        template:
+          spec:
+            containers:
+              - name: ray-worker
+                image: 507992857438.dkr.ecr.us-east-1.amazonaws.com/finbert_ray:amd64  # Replace with your image
+                resources:
+                  limits:
+                    memory: "4Gi"
+                    # nvidia.com/gpu: 0  # Uncomment if you need GPU
+                  requests:
+                    cpu: "1"
+                    memory: "4Gi"
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: finbert
+#   namespace: finbert
+#   annotations:
+#     nginx.ingress.kubernetes.io/rewrite-target: "/$1"
+#     # alb.ingress.kubernetes.io/scheme: internet-facing
+#     # alb.ingress.kubernetes.io/target-type: ip
+# spec:
+#   ingressClassName: nginx
+#   # ingressClassName: alb
+#   rules:
+#   - http:
+#       paths:
+#         - path: /finbert/(.*)
+#           pathType: ImplementationSpecific
+#           backend:
+#             service:
+#               name: finbert-head-svc
+#               port:
+#                 number: 8265
+#         - path: /finbert/serve/(.*)
+#           pathType: ImplementationSpecific
+#           backend:
+#             service:
+#               name: finbert-head-svc
+#               port:
+#                 number: 8000
